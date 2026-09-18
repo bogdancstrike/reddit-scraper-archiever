@@ -1,0 +1,87 @@
+# =============================================================================
+# Reddit Archiver - example configuration
+# Copy to config.yaml and edit. Secrets come from env vars, never hardcode them.
+# =============================================================================
+
+# Subreddits to archive (names only, no "r/").
+subreddits:
+  - Romania
+  - learnpython
+
+# Date range for the pull. Choose ONE style:
+#   1. Relative window: last N days up to now.
+#   2. Absolute: explicit start/end (ISO-8601, assumed UTC if no offset).
+# Absolute wins when both start and end are set. Values can come from a .env
+# via ${VAR}; a blank/unset placeholder is treated as "not set" (so leaving
+# START_DATE/END_DATE empty falls back to the relative window).
+date_range:
+  last_days: "${LAST_DAYS}"        # empty -> 365
+  start: "${START_DATE}"           # e.g. 2024-01-01T00:00:00Z (empty -> unset)
+  end: "${END_DATE}"               # e.g. 2025-01-01T00:00:00Z (empty -> unset)
+
+# Which record kinds to fetch.
+fetch:
+  posts: true
+  comments: true
+
+# Ordered backend chain: the first is primary, the rest are fallbacks tried
+# in order when the primary fails a page. Available: arctic_shift, pullpush,
+# reddit_api (enrichment stub), dump (stub).
+backends:
+  - arctic_shift
+  - pullpush
+
+# Per-backend tuning. Any omitted field uses the built-in default.
+backend_settings:
+  arctic_shift:
+    base_url: "https://arctic-shift.photon-reddit.com"
+    rate_limit:
+      min_interval_seconds: 0.5   # floor between requests (a few workers ok)
+      max_workers: 3              # concurrency ACROSS subreddits
+      max_retries: 5
+      backoff_base_seconds: 2.0
+      backoff_max_seconds: 60.0
+      respect_rate_limit_headers: true  # honor X-RateLimit-Remaining/Reset
+      page_limit: "auto"          # "auto" (100-1000) or an int <= 100
+
+  pullpush:
+    base_url: "https://api.pullpush.io"
+    rate_limit:
+      min_interval_seconds: 4.0   # ~15 req/min soft, well under 1000/hr ceiling
+      max_workers: 1              # single worker; pullpush is less reliable
+      max_retries: 5
+      backoff_base_seconds: 4.0
+      backoff_max_seconds: 120.0
+      respect_rate_limit_headers: true
+      page_limit: 100             # pullpush max size is 100
+
+# Output. Archived data is written as JSON, one directory per subreddit, under
+# `dir`:  <dir>/<subreddit>/{subreddit,posts,comments,progress}.json
+# ${VAR} placeholders are expanded from the environment (handy in Docker).
+output:
+  dir: "${OUTPUT_DIR}"          # empty -> defaults to ./data/output
+
+# Optional enrichment via the official Reddit API (PRAW). Only used by the
+# reddit_api backend. Credentials come from env vars.
+reddit_api:
+  client_id: "${REDDIT_CLIENT_ID}"
+  client_secret: "${REDDIT_CLIENT_SECRET}"
+  user_agent: "${REDDIT_USER_AGENT}"
+  queries_per_minute: 90          # honor the ~100/min free-tier ceiling
+
+# Phase 2 (keyword filtering + Excel export). Reads the JSON archive on disk;
+# does NOT re-scrape. Run via `reddit-archiver filter`.
+phase2:
+  keywords:                        # plain, case-insensitive substring terms
+    - example term
+  regexes:                         # simple regex patterns (Python re)
+    - "\\bfoo(bar)?\\b"
+  output_path: "flagged.xlsx"
+
+# Logging
+log_level: INFO                     # DEBUG | INFO | WARNING | ERROR
+
+# --dry-run behavior: one small slice from the first subreddit.
+dry_run:
+  last_days: 3
+  max_pages: 2

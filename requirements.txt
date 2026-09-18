@@ -1,0 +1,13 @@
+# Core runtime dependencies. See pyproject.toml for optional extras
+# (enrichment / dumps / phase2 / dev).
+httpx>=0.27
+pydantic>=2.6
+pydantic-settings>=2.2
+PyYAML>=6.0
+tenacity>=8.2
+python-dateutil>=2.9
+
+# Optional (uncomment as needed):
+# praw>=7.7          # reddit_api enrichment backend
+# zstandard>=0.22    # dump backend
+# openpyxl>=3.1      # phase 2 Excel export

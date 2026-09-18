@@ -1,0 +1,29 @@
+output
+*.json
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# Config & secrets
+config.yaml
+config.yml
+.env
+
+# Data / exports
+*.xlsx
+*.zst
+data/
+dumps/
+
+# Tooling
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/

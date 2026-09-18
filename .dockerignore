@@ -1,0 +1,27 @@
+# VCS / tooling
+.git
+.gitignore
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
+# Python build artifacts / virtualenvs
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Local data / exports (never bake into the image)
+data/
+dumps/
+*.xlsx
+*.zst
+
+# Secrets & local config (mount at runtime instead)
+config.yaml
+config.yml
+.env

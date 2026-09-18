@@ -1,0 +1,42 @@
+# Instalare — Reddit archiver
+
+## 1. Cerinte
+
+- Docker Desktop - ultima versiune
+- ~1 GB spatiu liber
+- Nu este necesar un browser deoarece datele vin din API-uri publice
+  (`arctic_shift`, `pullpush`)
+
+## 2. Imaginea
+
+```bash
+docker compose build
+```
+
+Rezulta `reddit-archiver:latest`.
+
+## 3. Pregatirea calculatorului
+
+Redenumeste fisierul porneste-scraper.bat.txt in porneste-scraper.bat. Acesta este
+executabilul pe care utilizatorii il vor rula pentru a porni scraperul.
+
+Asigurati-va ca laptopul nu intra in Sleep Mode dupa cateva minute de inactivitate.
+Modificati setarile laptopului astfel incat sa nu intre in Sleep Mode niciodata.
+
+Creeaza fisierul de setari din sablon, ca sa existe la locul lui:
+
+```bash
+cp .env.example .env
+```
+
+Se lasa cu valorile din sablon. **Nu se completeaza la instalare.**
+
+## 4. Verificare
+
+```bash
+docker compose config                  # sintaxa OK
+docker images | grep reddit-archiver   # imaginea exista
+ls .env docker-compose.yml             # fisierele necesare
+```
+
+Directorul `data/` se creeaza singur la prima rulare.

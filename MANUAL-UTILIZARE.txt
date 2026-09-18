@@ -1,0 +1,199 @@
+# PASI RULARE SCRAPER REDDIT
+
+## PASI DE RULARE
+
+1) Se deschide executabilul porneste-scraper.bat
+
+2) Se asteapta ca scraperul sa se pregateasca. La prima rulare poate dura
+   cateva minute - se descarca si se construieste tot ce este necesar.
+   Daca Docker Desktop nu este pornit, scriptul incearca sa il porneasca singur
+   si asteapta pana cand este gata.
+
+3) Se va afisa urmatorul mesaj:
+
+        ===========================================
+          Scraperul a pornit.
+          Nu inchideti aceasta fereastra pana la
+          mesajul "GATA!".
+
+          Acest scraper NU are interfata vizuala.
+          Progresul se vede in randurile de mai jos.
+        ===========================================
+
+4) De aici incolo, in fereastra apar randuri de progres, de exemplu:
+
+        reddit-archiver-a  | Window: 2026-07-23 09:00 -> 2026-07-28 09:00 (35 subreddit(s), backends=['arctic_shift', 'pullpush'])
+        reddit-archiver-a  | [oradea/posts] starting at 2026-07-23 09:00 (total so far=0)
+        reddit-archiver-a  | [oradea/posts] 2026-07-25 14:12 (48.2% of window) total=120 eta~7.4m
+        reddit-archiver-a  | [oradea/posts] complete (total=37, pages=3)
+
+   Procentul si **eta** arata cat a ramas din perioada cautata pentru acel
+   subreddit. Este normal ca mai multe subreddit-uri sa avanseze in acelasi timp,
+   deci randurile apar amestecate.
+
+5) Cand scraperul a terminat, in fereastra apare mesajul
+   **"GATA! Scraperul a terminat cu succes."** impreuna cu locul unde au fost
+   salvate datele. Abia atunci se poate inchide fereastra.
+
+> **IMPORTANT - diferenta fata de scraperele de YouTube si X (Twitter):**
+> scraperul de Reddit **nu foloseste un browser**, ci ia datele direct din
+> arhivele publice Arctic Shift si PullPush. De aceea **nu exista pagina
+> noVNC** si nu exista nimic de privit "live" intr-un
+> browser. Tot ce se intampla se vede ca text in fereastra neagra.
+
+---
+
+## IN CAZUL IN CARE ATI INCHIS DIN GRESEALA FEREASTRA (SAU ATI APASAT Ctrl + C)
+
+1) Se asigura ca acea fereastra este inchisa. Daca apare intrebarea
+   `Terminate batch job (Y/N)?`, se raspunde cu **Y** si Enter.
+2) Se reia pasul 1 din pasii de rulare.
+
+Nu se pierde nimic: scraperul retine unde a ramas si continua de acolo.
+Subreddit-urile deja terminate sunt sarite, iar in fereastra apare mesajul
+`already complete; skipping`.
+
+---
+
+## CE ANUME SE CAUTA
+
+Toate setarile sunt intr-un singur fisier: **`docker-compose.yml`**. Se deschide
+cu Notepad sau cu orice editor de text.
+
+### A) Subreddit-urile - randul `SUBREDDITS`
+
+Ruleaza un singur container (`scraper-a`), deci exista un singur rand
+`SUBREDDITS`:
+
+        services:
+          scraper-a:
+            ...
+            environment:
+              <<: *scrape-settings
+              SUBREDDITS: "romania,cluj,bucuresti,timisoara"
+
+Numele se scriu fara `r/` in fata, despartite prin virgula, toate pe acelasi
+rand, intre ghilimele. Pentru a adauga un subreddit nou se pune o virgula si
+numele lui:
+
+              SUBREDDITS: "romania,cluj,bucuresti,timisoara,sibiu"
+
+**Fiecare subreddit se scrie o singura data** in acest rand. Restul randurilor
+se lasa exact asa cum sunt.
+
+### B) Perioada de timp - randurile `LAST_DAYS` / `START_DATE` / `END_DATE`
+
+Perioada se scrie sus in `docker-compose.yml`, in blocul `x-scrape-settings`. Se alege **una** dintre
+cele doua variante:
+
+**Varianta 1 - ultimele N zile** (cea mai simpla):
+
+          LAST_DAYS: "5"
+          START_DATE: ""
+          END_DATE: ""
+
+**Varianta 2 - o perioada exacta** (se completeaza amandoua datele, iar
+`LAST_DAYS` se lasa gol):
+
+          LAST_DAYS: ""
+          START_DATE: "2026-07-20T00:00:00Z"
+          END_DATE: "2026-07-22T00:00:00Z"
+
+Formatul datei este **AN-LUNA-ZI**, urmat de `T00:00:00Z` (Z inseamna ora
+universala UTC, cu o ora in urma fata de ora Romaniei iarna si doua ore vara).
+
+**ATENTIE:** valorile se scriu intre ghilimele, dupa `:` se lasa un spatiu, iar
+alinierea de la inceputul randului nu se modifica (in acest fisier spatiile de
+la inceput au inteles). Randurile care incep cu `#` sunt explicatii si sunt
+ignorate.
+
+---
+
+## UNDE SE GASESC DATELE
+
+Datele scrape-uite pot fi gasite la urmatoarele cai, in folderul scraperului:
+
+    - data/<nume_subreddit>/<nume_subreddit>_merged.json
+                                              (TOT intr-un singur fisier:
+                                               postari + comentarii, in ordine
+                                               cronologica - acesta este
+                                               fisierul care se trimite mai
+                                               departe)
+    - data/<nume_subreddit>/posts.json        (postarile)
+    - data/<nume_subreddit>/comments.json     (comentariile)
+    - data/<nume_subreddit>/subreddit.json    (informatii despre subreddit)
+    - data/<nume_subreddit>/progress.json     (marcaj intern: unde a ramas scraperul)
+
+Fisierul `_merged.json` se creeaza singur, la finalul scraperului. In fereastra
+apar, chiar inainte de "GATA!", randuri de forma:
+
+    run finished; merging /data/output
+    romania: 20678 post(s) + 13557 comment(s) -> /data/output/romania/romania_merged.json
+
+De exemplu:
+
+    data/oradea/oradea_merged.json
+    data/oradea/posts.json
+    data/oradea/comments.json
+
+Calea completa apare si in fereastra, pe ultimele randuri, dupa mesajul:
+
+    "Datele scrape-uite se afla in:"
+
+---
+
+## IMPORTANT
+
+- Nu modificati / stergeti / mutati / deschideti fisierele din `data/` ! Orice
+  modificare poate contribui la functionarea necorespunzatoare a scraperului,
+  ceea ce ulterior poate crea erori sau blocari. In special `progress.json`:
+  daca este sters, scraperul o ia de la capat.
+- Nu modificati fisierul `docker-compose.yml` in timp ce scraper-ul ruleaza!
+  Orice subreddit-uri noi pe care le-ati descoperit le salvati intr-un fisier
+  separat si asteptati scraper-ul sa termine sesiunea curenta pentru a putea
+  incepe una noua pe subreddit-urile noi.
+- Cand mutati / copiati scraperul pe alt calculator, copiati TOT folderul,
+  inclusiv `docker-compose.yml` si `.env`.
+- Asigurati-va ca aplicatia Docker Desktop este pornita inainte de a rula
+  scraperul. Scrie "Running" in coltul din stanga jos al aplicatiei.
+- Asigurati-va ca laptopul este mereu conectat la priza.
+- Asigurati-va ca laptopul este conectat mereu la internet.
+- Asigurati-va ca laptopul nu intra in Sleep Mode dupa cateva minute de
+  inactivitate. Modificati setarile laptopului astfel incat sa nu intre in
+  Sleep Mode niciodata.
+- O rulare pe multe subreddit-uri si pe o perioada lunga poate dura ore sau zile.
+  Este normal. Scraperul merge incet in mod intentionat, ca sa nu fie blocat de
+  serverele de unde ia datele.
+
+---
+
+## MESAJE CARE POT APAREA IN FEREASTRA
+
+    - "Window: ... -> ... (35 subreddit(s), ...)"   : normal, arata perioada si cate
+                                                      subreddit-uri s-au configurat.
+    - "[nume_subreddit/posts] starting at ..."      : normal, a inceput un subreddit.
+    - "... (48.2% of window) total=120 eta~7.4m"    : normal, progresul si timpul estimat ramas.
+    - "[nume_subreddit/posts] complete (total=...)" : normal, subreddit terminat.
+    - "already complete; skipping"                  : normal, fusese deja terminat la o
+                                                      rulare anterioara.
+    - "backend arctic_shift failed: ...;
+       trying fallback"                             : normal, sursa principala nu a raspuns,
+                                                      se incearca sursa de rezerva.
+    - "all backends failed at ...;
+       will resume later"                           : nu s-a putut lua o bucata de date. Se
+                                                      reia la urmatoarea rulare - porniti din
+                                                      nou executabilul cand se termina.
+    - "shutdown requested; finishing current
+       batch and checkpointing..."                  : normal dupa Ctrl + C. Se asteapta cateva
+                                                      secunde sa salveze si se opreste singur.
+    - "Done. posts=1234 comments=5678 in 812.3s"    : gata, cate postari si comentarii s-au
+                                                      colectat in total.
+    - "Docker nu ruleaza"                           : porniti aplicatia Docker Desktop si
+                                                      incercati din nou.
+    - "Docker nu este instalat"                     : instalati Docker Desktop si reporniti
+                                                      calculatorul.
+    - "Scraperul s-a oprit cu erori"                : rulati din nou. Daca se repeta, trimiteti
+                                                      catre suport fisierul
+                                                      `logs/ultima-rulare.log`.
+
+---

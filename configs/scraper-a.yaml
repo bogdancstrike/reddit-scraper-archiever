@@ -1,0 +1,32 @@
+# OPTIONAL. Since the compose setup became env-driven, this file is NOT used by
+# default: docker-compose.yml configures the run through environment variables
+# (SUBREDDITS, LAST_DAYS, ...) against the image's config.docker.yaml. Keep this
+# only if you prefer a hand-written config -- mount it over /app/config.yaml and
+# set CONFIG_FILE=/app/config.yaml on the service (see the note at the bottom of
+# docker-compose.yml). It also works for local CLI runs:
+#   reddit-archiver --config configs/scraper-a.yaml run
+#
+# Config for the scraper-a container. Give each container a distinct set of
+# subreddits so the fleet covers more ground in parallel. See
+# ../config.example.yaml for every option, fully commented.
+subreddits:
+  - romania
+  - casualromania
+
+date_range:
+  last_days: "${LAST_DAYS}"        # empty -> 365
+  start: "${START_DATE}"           # set both start+end in .env for an exact period
+  end: "${END_DATE}"
+
+fetch:
+  posts: true
+  comments: true
+
+backends:
+  - arctic_shift
+  - pullpush
+
+output:
+  dir: "${OUTPUT_DIR}"          # set by docker-compose to /data/output
+
+log_level: INFO

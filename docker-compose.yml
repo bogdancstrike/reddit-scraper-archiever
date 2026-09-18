@@ -1,0 +1,55 @@
+name: reddit-archiver
+
+x-scrape-settings: &scrape-settings
+  LAST_DAYS: "10"
+  START_DATE: ""
+  END_DATE: ""
+  FETCH_POSTS: "true"
+  FETCH_COMMENTS: "true"
+  BACKENDS: "arctic_shift,pullpush"
+  ARCTIC_SHIFT_MIN_INTERVAL: "0.5"
+  ARCTIC_SHIFT_MAX_WORKERS: "3"
+  ARCTIC_SHIFT_MAX_RETRIES: "5"
+  ARCTIC_SHIFT_BACKOFF_BASE: "2.0"
+  ARCTIC_SHIFT_BACKOFF_MAX: "60.0"
+  ARCTIC_SHIFT_PAGE_LIMIT: "auto"
+  PULLPUSH_MIN_INTERVAL: "4.0"
+  PULLPUSH_MAX_WORKERS: "1"
+  PULLPUSH_MAX_RETRIES: "5"
+  PULLPUSH_BACKOFF_BASE: "4.0"
+  PULLPUSH_BACKOFF_MAX: "120.0"
+  PULLPUSH_PAGE_LIMIT: "100"
+  OUTPUT_DIR: /data/output
+  LOG_LEVEL: INFO
+  MERGE_AFTER_RUN: "true"
+
+x-archiver-base: &archiver-base
+  build: .
+  image: reddit-archiver:latest
+  restart: "no"
+  stop_grace_period: 60s
+  env_file:
+    - path: .env
+      required: false
+  volumes:
+    - ${DATA_DIR:-./data}:/data/output
+
+services:
+  scraper-a:
+    <<: *archiver-base
+    container_name: reddit-archiver-a
+    environment:
+      <<: *scrape-settings
+      SUBREDDITS: "romania,casualro"
+
+  filter:
+    <<: *archiver-base
+    container_name: reddit-archiver-filter
+    profiles: ["filter"]
+    command: ["filter"]
+    environment:
+      <<: *scrape-settings
+      SUBREDDITS: "romania,casualro"
+      KEYWORDS: "atac cibernetic,ransomware,phishing"
+      REGEXES: ""
+      FLAGGED_OUTPUT: /data/output/flagged.xlsx

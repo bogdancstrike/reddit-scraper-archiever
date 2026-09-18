@@ -1,0 +1,84 @@
+# =============================================================================
+# Reddit Archiver - config used inside the Docker image (CONFIG_FILE default).
+#
+# Every value is a ${VAR} placeholder, so the whole run is configured from the
+# `environment:` block of docker-compose.yml - no YAML editing needed. Any
+# variable left unset/blank falls back to the built-in default noted below.
+#
+# Lists arrive as comma-separated strings (SUBREDDITS=romania,cybersecurity).
+#
+# Prefer a hand-written YAML instead? Mount it over this file and point
+# CONFIG_FILE at it - see the commented example in docker-compose.yml.
+# =============================================================================
+
+# Subreddits to archive (names only, no "r/"). Required.
+subreddits: "${SUBREDDITS}"
+
+# Time window. Either LAST_DAYS (relative) or START_DATE+END_DATE (absolute,
+# ISO-8601, UTC when no offset). Absolute wins when both dates are set.
+date_range:
+  last_days: "${LAST_DAYS}"        # default 365
+  start: "${START_DATE}"           # e.g. 2025-01-01T00:00:00Z
+  end: "${END_DATE}"               # e.g. 2025-02-01T00:00:00Z
+
+# Which record kinds to fetch (true/false; both default to true).
+fetch:
+  posts: "${FETCH_POSTS}"
+  comments: "${FETCH_COMMENTS}"
+
+# Ordered backend chain: first is primary, the rest are fallbacks tried in
+# order when the primary fails a page. Available: arctic_shift, pullpush,
+# reddit_api, dump. Default: arctic_shift,pullpush
+backends: "${BACKENDS}"
+
+# Per-backend pacing. Blank -> the built-in default shown in the comment.
+backend_settings:
+  arctic_shift:
+    base_url: "${ARCTIC_SHIFT_BASE_URL}"                  # https://arctic-shift.photon-reddit.com
+    rate_limit:
+      min_interval_seconds: "${ARCTIC_SHIFT_MIN_INTERVAL}"  # 0.5
+      max_workers: "${ARCTIC_SHIFT_MAX_WORKERS}"            # 3 (concurrency ACROSS subreddits)
+      max_retries: "${ARCTIC_SHIFT_MAX_RETRIES}"            # 5
+      backoff_base_seconds: "${ARCTIC_SHIFT_BACKOFF_BASE}"  # 2.0
+      backoff_max_seconds: "${ARCTIC_SHIFT_BACKOFF_MAX}"    # 60.0
+      page_limit: "${ARCTIC_SHIFT_PAGE_LIMIT}"              # auto (100-1000) or an int
+
+  pullpush:
+    base_url: "${PULLPUSH_BASE_URL}"                      # https://api.pullpush.io
+    rate_limit:
+      min_interval_seconds: "${PULLPUSH_MIN_INTERVAL}"      # 4.0 (~15 req/min)
+      max_workers: "${PULLPUSH_MAX_WORKERS}"                # 1
+      max_retries: "${PULLPUSH_MAX_RETRIES}"                # 5
+      backoff_base_seconds: "${PULLPUSH_BACKOFF_BASE}"      # 2.0
+      backoff_max_seconds: "${PULLPUSH_BACKOFF_MAX}"        # 60.0
+      page_limit: "${PULLPUSH_PAGE_LIMIT}"                  # 100 (pullpush max)
+
+# Output root. docker-compose sets OUTPUT_DIR=/data/output, which is the
+# bind-mounted host directory, so the JSON lands outside the container:
+#   <dir>/<subreddit>/{subreddit,posts,comments,progress}.json
+output:
+  dir: "${OUTPUT_DIR}"
+
+# Optional enrichment via the official Reddit API (PRAW); only used when
+# `reddit_api` is in BACKENDS.
+reddit_api:
+  client_id: "${REDDIT_CLIENT_ID}"
+  client_secret: "${REDDIT_CLIENT_SECRET}"
+  user_agent: "${REDDIT_USER_AGENT}"
+  queries_per_minute: "${REDDIT_QUERIES_PER_MINUTE}"      # 90
+
+# Phase 2 (keyword filter + Excel export), run with the `filter` command.
+# KEYWORDS is comma-separated; REGEXES is newline-separated (a regex may
+# contain a comma). FLAGGED_OUTPUT is relative to the working directory, so
+# point it under /data/output to land on the host.
+phase2:
+  keywords: "${KEYWORDS}"
+  regexes: "${REGEXES}"
+  output_path: "${FLAGGED_OUTPUT}"                        # flagged.xlsx
+
+log_level: "${LOG_LEVEL}"                                 # DEBUG | INFO | WARNING | ERROR
+
+# `run --dry-run`: one small slice from the first subreddit.
+dry_run:
+  last_days: "${DRY_RUN_LAST_DAYS}"                       # 3
+  max_pages: "${DRY_RUN_MAX_PAGES}"                       # 2
